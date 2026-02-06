@@ -5,66 +5,54 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 import google.generativeai as genai
 
-# --- CONFIGURATION ---
-# Apni Telegram ID yahan confirm karein
+# --- 1. CONFIGURATION ---
 ADMIN_ID = 7851228033 
-
-# Gemini API Key Setup
 genai.configure(api_key="AIzaSyDNQQ4VpxDgpoa9WMEb0DdVGfg3xWokAD0")
 model = genai.GenerativeModel('gemini-pro')
 
-# --- RAILWAY FIX: HEALTH CHECK SERVER ---
-server = Flask(__name__)
-@server.route('/')
-def health_check():
-    return "Nexora AI is Online and Secure!"
+# --- 2. RAILWAY HEALTH SERVER (Zaroori hai) ---
+app_flask = Flask(__name__)
+@app_flask.route('/')
+def health():
+    return "Nexora is Running!"
 
 def run_flask():
-    # Railway ke port par server chalana
     port = int(os.environ.get("PORT", 5000))
-    server.run(host='0.0.0.0', port=port)
+    app_flask.run(host='0.0.0.0', port=port)
 
-# --- AI AGENT LOGIC ---
+# --- 3. AI BOT LOGIC ---
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     
-    # Security: Sirf aapke orders sunega
+    # Security: Sirf aapke liye
     if user.id != ADMIN_ID:
         return 
 
     user_text = update.message.text
     
     try:
-        # AI ko role dena (Autonomous Agent Mode)
-        prompt = (
-            f"System: You are NEXORA AI, a secure autonomous teammate. "
-            f"You provide expert answers and help with tasks. "
-            f"Master User ID: {user.id}. Reply in a natural, helpful way.\n"
-            f"User: {user_text}"
-        )
+        # AI Agent Instruction
+        prompt = f"System: You are Nexora AI, a secure autonomous teammate. Master: {user.id}. \nUser: {user_text}"
         response = model.generate_content(prompt)
         bot_reply = response.text
     except Exception as e:
-        bot_reply = "⚠️ Connection Error: AI tak message nahi pahuch raha."
+        bot_reply = "⚠️ AI Error. API Key check karein."
 
-    # Final Response Header
     full_response = f"🛡️ **NEXORA SECURE-CORE**\n\n{bot_reply}"
     await update.message.reply_text(full_response, parse_mode='Markdown')
 
-# --- MAIN EXECUTION ---
+# --- 4. STARTING (Sirf Ek Baar) ---
 if __name__ == '__main__':
     token = os.environ.get("TELEGRAM_TOKEN")
     
-    if not token:
-        print("Error: TELEGRAM_TOKEN environment variable mein nahi mila!")
-    else:
-        # 1. Background mein Flask server start karein
+    if token:
+        # Flask ko background mein chalana
         threading.Thread(target=run_flask, daemon=True).start()
         
-        # 2. Telegram Bot start karein
-        app = ApplicationBuilder().token(token).build()
-        app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+        # Bot setup
+        app_bot = ApplicationBuilder().token(token).build()
+        app_bot.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
         
-        print("Nexora Agent is Running. Security Active.")
-        app.run_polling()
+        print("Nexora Shield Active...")
+        app_bot.run_polling()
         
