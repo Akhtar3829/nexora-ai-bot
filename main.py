@@ -7,7 +7,7 @@ from google import genai
 
 # --- CONFIGURATION ---
 ADMIN_ID = int(os.environ.get("ADMIN_ID", 7851228033))
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyBq-1LCTleN7dGsk9R8IWBumH6DXtPtpw8")
+GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyDNQQ4VpxDgpoa9WMEb0DdVGfg3xWokAD0")
 
 # Nayi Library ka Client Setup
 client = genai.Client(api_key=GEMINI_KEY)
