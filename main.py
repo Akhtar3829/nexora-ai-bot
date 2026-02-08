@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 # Configuration
 BOT_TOKEN = os.environ.get("8296963784:AAFxdKKYnNf8Kc5VQQc-6LZeHPFZzRCKS0s", "")
 GEMINI_API_KEY = os.environ.get("AIzaSyBq-1LCTleN7dGsk9R8IWBumH6DXtPtpw8", "")
-ADMIN_ID = int(os.environ.get("7851228033", "0"))
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "7851228033")
 
 # Validate environment variables
 if not BOT_TOKEN:
