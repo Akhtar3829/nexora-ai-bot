@@ -13,7 +13,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 # Hum code mein direct values nahi likhenge, Railway Variables use karenge
 ADMIN_ID = int(os.environ.get("ADMIN_ID", 7851228033))
 BOT_TOKEN = os.environ.get("8296963784:AAFxdKKYnNf8Kc5VQQc-6LZeHPFZzRCKS0s")
-GEMINI_KEY = os.environ.get("AIzaSyBq-1LCTleN7dGsk9R8IWBumH6DXtPtpw8")
+GEMINI_KEY = os.environ.get("AIzaSyDNQQ4VpxDgpoa9WMEb0DdVGfg3xWokAD0")
 
 # AI Client Setup (Gemini 2.0 Flash)
 client = genai.Client(api_key=GEMINI_KEY)
