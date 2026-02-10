@@ -1,4 +1,18 @@
 import os
+
+# Ye lines debug karne ke liye hain
+print("--- DEBUG START ---")
+print(f"DEBUG: BOT_TOKEN is {'Set' if os.getenv('BOT_TOKEN') else 'NOT SET'}")
+print(f"DEBUG: GEMINI_API_KEY is {'Set' if os.getenv('GEMINI_API_KEY') else 'NOT SET'}")
+print(f"DEBUG: ADMIN_ID is {'Set' if os.getenv('ADMIN_ID') else 'NOT SET'}")
+print("--- DEBUG END ---")
+
+# Iske niche aapka baaki code shuru hoga...
+
+
+
+
+import os
 import logging
 from flask import Flask
 from telegram import Update
