@@ -1,5 +1,4 @@
 import os
-import threading
 import logging
 from flask import Flask
 from telegram import Update
@@ -13,16 +12,35 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Railway dashboard se variables uthana
-ADMIN_ID = int(os.environ.get("ADMIN_ID", 7851228033))
+# Railway dashboard se variables uthana - DEBUG MODE
+logger.info("=== DEBUG: Loading environment variables ===")
+
+ADMIN_ID = os.environ.get("7851228033")
 BOT_TOKEN = os.environ.get("8296963784:AAFxdKKYnNf8Kc5VQQc-6LZeHPFZzRCKS0s")
 GEMINI_KEY = os.environ.get("AIzaSyBq-1LCTleN7dGsk9R8IWBumH6DXtPtpw8")
 
+# Debug print all variables (masked)
+logger.info(f"ADMIN_ID exists: {bool(ADMIN_ID)}")
+logger.info(f"BOT_TOKEN exists: {bool(BOT_TOKEN)}")
+logger.info(f"GEMINI_API_KEY exists: {bool(GEMINI_KEY)}")
+
+# Convert ADMIN_ID to int safely
+try:
+    ADMIN_ID = int(ADMIN_ID) if ADMIN_ID else 851228033
+except ValueError:
+    ADMIN_ID = 851228033
+    logger.warning(f"Invalid ADMIN_ID, using default: {ADMIN_ID}")
+
 # Check environment variables
 if not BOT_TOKEN:
-    logger.error("BOT_TOKEN environment variable not set!")
+    logger.error("❌ BOT_TOKEN environment variable not set!")
+else:
+    logger.info("✅ BOT_TOKEN found")
+
 if not GEMINI_KEY:
-    logger.error("GEMINI_API_KEY environment variable not set!")
+    logger.error("❌ GEMINI_API_KEY environment variable not set!")
+else:
+    logger.info("✅ GEMINI_API_KEY found")
 
 # AI Client Setup
 client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
@@ -32,11 +50,16 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Nexora is Alive!"
+    return "Nexora is Alive! ✅"
 
-@app.route('/health')
-def health():
-    return "OK", 200
+@app.route('/debug')
+def debug():
+    return f"""
+    <h1>Debug Info</h1>
+    <p>BOT_TOKEN: {'SET' if BOT_TOKEN else 'NOT SET'}</p>
+    <p>GEMINI_API_KEY: {'SET' if GEMINI_KEY else 'NOT SET'}</p>
+    <p>ADMIN_ID: {ADMIN_ID}</p>
+    """
 
 def run_flask():
     try:
@@ -49,20 +72,24 @@ def run_flask():
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = update.effective_user.id
-        logger.info(f"Received message from user {user_id}")
+        logger.info(f"📩 Received message from user {user_id}: {update.message.text[:50]}...")
         
         if user_id != ADMIN_ID:
-            logger.warning(f"Unauthorized access attempt from user {user_id}")
-            await update.message.reply_text("❌ Access Denied.")
+            logger.warning(f"🚫 Unauthorized access attempt from user {user_id}")
+            await update.message.reply_text("❌ Access Denied. Only admin can use this bot.")
             return 
         
         if not client:
-            await update.message.reply_text("⚠️ AI Service not configured.")
+            await update.message.reply_text("⚠️ AI Service not configured properly.")
             return
             
         user_message = update.message.text
-        logger.info(f"Processing message: {user_message[:50]}...")
         
+        # Simple test first
+        if user_message.lower() == "test":
+            await update.message.reply_text("✅ Bot is working! AI service is ready.")
+            return
+            
         response = client.models.generate_content(
             model="gemini-2.0-flash", 
             contents=user_message
@@ -72,46 +99,36 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🛡️ **NEXORA**\n\n{response.text}", 
             parse_mode='Markdown'
         )
-        logger.info("Response sent successfully")
+        logger.info("✅ Response sent successfully")
         
     except Exception as e:
-        logger.error(f"Error in handle_message: {e}")
-        await update.message.reply_text("⚠️ Error processing your request.")
-
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.error(f"Update {update} caused error {context.error}")
+        logger.error(f"❌ Error in handle_message: {e}")
+        await update.message.reply_text("⚠️ Error processing your request. Please try again.")
 
 if __name__ == '__main__':
-    try:
-        if BOT_TOKEN and GEMINI_KEY:
-            # Flask server in separate thread
-            flask_thread = threading.Thread(target=run_flask, daemon=True)
-            flask_thread.start()
-            logger.info("Flask server started in background")
-            
-            # Telegram bot setup
-            bot_app = ApplicationBuilder() \
-                .token(BOT_TOKEN) \
-                .build()
-            
-            bot_app.add_error_handler(error_handler)
+    import threading
+    
+    logger.info("=== STARTING APPLICATION ===")
+    
+    # Start Flask server in background
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    
+    # Start Telegram bot if token exists
+    if BOT_TOKEN and GEMINI_KEY:
+        try:
+            logger.info("🤖 Starting Telegram bot...")
+            bot_app = ApplicationBuilder().token(BOT_TOKEN).build()
             bot_app.add_handler(
                 MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message)
             )
             
-            logger.info("Starting Telegram bot...")
-            
-            # Start polling with better parameters
+            logger.info("✅ Bot application built successfully")
             bot_app.run_polling(
                 drop_pending_updates=True,
-                allowed_updates=Update.ALL_TYPES,
-                close_loop=False
+                allowed_updates=Update.ALL_TYPES
             )
-            
-        else:
-            logger.error("Missing required environment variables!")
-            # Start only Flask if bot token missing
-            run_flask()
-            
-    except Exception as e:
-        logger.error(f"Fatal error: {e}")
+        except Exception as e:
+            logger.error(f"❌ Bot startup error: {e}")
+    else:
+        logger.error("❌ Missing required environment variables! Running only Flask server.")
