@@ -12,7 +12,7 @@ print("--- DEBUG END ---")
 
 
 
-import os
+
 import logging
 from flask import Flask
 from telegram import Update
