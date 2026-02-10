@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Railway dashboard se variables uthana
-ADMIN_ID = int(os.environ.get("ADMIN_ID", 851228033))
+ADMIN_ID = int(os.environ.get("ADMIN_ID", 7851228033)
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 
