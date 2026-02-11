@@ -14,13 +14,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 2. Railway dashboard se variables uthana
-# Default ID 7851228033 rakhi hai jaisa aapne pehle bataya tha
 ADMIN_ID = int(os.environ.get("ADMIN_ID", 7851228033))
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 
-# 3. AI Client Setup
-client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
+# 3. AI Client Setup (Improved for stability)
+# Yahan 'v1' api_version specify kiya hai taaki 404 error na aaye
+client = None
+if GEMINI_KEY:
+    client = genai.Client(
+        api_key=GEMINI_KEY,
+        http_options={'api_version': 'v1'}
+    )
 
 # 4. Railway Survival Server (Flask)
 app = Flask(__name__)
@@ -57,22 +62,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⚠️ AI Service not configured. Check API Key.")
             return
 
-        # AI Response logic - Using stable gemini-1.5-flash
+        # AI Response logic - Using exact stable model name
         response = client.models.generate_content(
-            model="models/gemini-1.5-flash" 
+            model="gemini-1.5-flash", 
             contents=user_message
         )
         
         # Markdown formatting ke saath reply
-        await update.message.reply_text(
-            f"🛡️ **NEXORA**\n\n{response.text}", 
-            parse_mode='Markdown'
-        )
-        logger.info(f"✅ Response sent to {user_id}")
+        if response and response.text:
+            await update.message.reply_text(
+                f"🛡️ **NEXORA**\n\n{response.text}", 
+                parse_mode='Markdown'
+            )
+            logger.info(f"✅ Response sent to {user_id}")
+        else:
+            await update.message.reply_text("⚠️ AI generated an empty response.")
         
     except Exception as e:
         logger.error(f"❌ Gemini Error: {e}")
-        # Asli error bot par dikhane ke liye taaki debugging aasaan ho
+        # Asli error bot par dikhane ke liye
         await update.message.reply_text(f"⚠️ AI Error: {str(e)}")
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -97,3 +105,4 @@ if __name__ == '__main__':
             logger.error(f"Fatal error: {e}")
     else:
         logger.error("❌ Missing BOT_TOKEN or GEMINI_API_KEY in Railway Variables!")
+                      
