@@ -59,7 +59,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # AI Response logic - Using stable gemini-1.5-flash
         response = client.models.generate_content(
-            model="gemini-1.5-flash", 
+            model="models/gemini-1.5-flash" 
             contents=user_message
         )
         
