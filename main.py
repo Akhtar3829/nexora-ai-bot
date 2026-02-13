@@ -6,28 +6,24 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 from google import genai
 
-# 1. Setup logging
+# -------------------- LOGGING SETUP --------------------
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# 2. Railway dashboard se variables uthana
+# -------------------- ENV VARIABLES --------------------
 ADMIN_ID = int(os.environ.get("ADMIN_ID", 7851228033))
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 
-# 3. AI Client Setup (Improved for stability)
-# Yahan 'v1' api_version specify kiya hai taaki 404 error na aaye
+# -------------------- GEMINI CLIENT --------------------
 client = None
 if GEMINI_KEY:
-    client = genai.Client(
-        api_key=GEMINI_KEY,
-        http_options={'api_version': 'v1'}
-    )
+    client = genai.Client(api_key=GEMINI_KEY)
 
-# 4. Railway Survival Server (Flask)
+# -------------------- FLASK SERVER --------------------
 app = Flask(__name__)
 
 @app.route('/')
@@ -39,70 +35,63 @@ def health():
     return "OK", 200
 
 def run_flask():
-    try:
-        port = int(os.environ.get("PORT", 8080))
-        logger.info(f"Starting Flask server on port {port}")
-        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
-    except Exception as e:
-        logger.error(f"Flask server error: {e}")
+    port = int(os.environ.get("PORT", 8080))
+    logger.info(f"🌐 Flask running on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
-# 5. Message Handler (Main Logic)
+# -------------------- TELEGRAM HANDLER --------------------
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = update.effective_user.id
         user_message = update.message.text
-        
-        # Admin ID check
+
+        # Admin check
         if user_id != ADMIN_ID:
-            logger.warning(f"Unauthorized access: {user_id}")
-            await update.message.reply_text("❌ Access Denied. Only admin can use this bot.")
-            return 
-        
-        if not client:
-            await update.message.reply_text("⚠️ AI Service not configured. Check API Key.")
+            await update.message.reply_text("❌ Access Denied.")
             return
 
-        # AI Response logic - Using exact stable model name
+        if not client:
+            await update.message.reply_text("⚠️ AI not configured.")
+            return
+
+        # Gemini call
         response = client.models.generate_content(
-            model="gemini-1.5-flash", 
+            model="gemini-2.0-flash",
             contents=user_message
         )
-        
-        # Markdown formatting ke saath reply
+
         if response and response.text:
             await update.message.reply_text(
-                f"🛡️ **NEXORA**\n\n{response.text}", 
-                parse_mode='Markdown'
+                f"🛡️ NEXORA AI\n\n{response.text}"
             )
-            logger.info(f"✅ Response sent to {user_id}")
         else:
-            await update.message.reply_text("⚠️ AI generated an empty response.")
-        
-    except Exception as e:
-        logger.error(f"❌ Gemini Error: {e}")
-        # Asli error bot par dikhane ke liye
-        await update.message.reply_text(f"⚠️ AI Error: {str(e)}")
+            await update.message.reply_text("⚠️ Empty AI response.")
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    except Exception as e:
+        logger.error(f"Gemini Error: {e}")
+        await update.message.reply_text("⚠️ AI service temporary unavailable.")
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(f"Update {update} caused error {context.error}")
 
-# 6. Main Execution
+# -------------------- MAIN --------------------
 if __name__ == '__main__':
     if BOT_TOKEN and GEMINI_KEY:
-        # Flask server background mein start karein
+
+        # Start Flask in background
         threading.Thread(target=run_flask, daemon=True).start()
-        
+
         try:
-            # Telegram bot setup
             bot_app = ApplicationBuilder().token(BOT_TOKEN).build()
+            bot_app.add_handler(
+                MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message)
+            )
             bot_app.add_error_handler(error_handler)
-            bot_app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-            
-            logger.info("🤖 NEXORA AI is starting...")
+
+            logger.info("🤖 NEXORA AI Started Successfully")
             bot_app.run_polling(drop_pending_updates=True)
-            
+
         except Exception as e:
             logger.error(f"Fatal error: {e}")
     else:
-        logger.error("❌ Missing BOT_TOKEN or GEMINI_API_KEY in Railway Variables!")
-                      
+        logger.error("❌ Missing BOT_TOKEN or GEMINI_API_KEY")
