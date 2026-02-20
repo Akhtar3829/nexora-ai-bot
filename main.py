@@ -4,7 +4,7 @@ import logging
 from flask import Flask
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
-from google import genai
+from openai import OpenAI
 
 # -------------------- LOGGING SETUP --------------------
 logging.basicConfig(
@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 # -------------------- ENV VARIABLES --------------------
 ADMIN_ID = int(os.environ.get("ADMIN_ID", 7851228033))
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
+OPENAI_KEY = os.environ.get("OPENAI_KEY")
 
-# -------------------- GEMINI CLIENT --------------------
+# -------------------- OPENAI CLIENT --------------------
 client = None
-if GEMINI_KEY:
-    client = genai.Client(api_key=GEMINI_KEY)
+if OPENAI_KEY:
+    client = OpenAI(api_key=OPENAI_KEY)
 
 # -------------------- FLASK SERVER --------------------
 app = Flask(__name__)
@@ -54,21 +54,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⚠️ AI not configured.")
             return
 
-        # Gemini call
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=user_message
+        # OpenAI call
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are Nexora AI, a powerful assistant."},
+                {"role": "user", "content": user_message}
+            ]
         )
 
-        if response and response.text:
+        ai_reply = response.choices[0].message.content
+
+        if ai_reply:
             await update.message.reply_text(
-                f"🛡️ NEXORA AI\n\n{response.text}"
+                f"🛡️ NEXORA AI\n\n{ai_reply}"
             )
         else:
             await update.message.reply_text("⚠️ Empty AI response.")
 
     except Exception as e:
-        logger.error(f"Gemini Error: {e}")
+        logger.error(f"OpenAI Error: {e}")
         await update.message.reply_text("⚠️ AI service temporary unavailable.")
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
@@ -76,7 +81,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 
 # -------------------- MAIN --------------------
 if __name__ == '__main__':
-    if BOT_TOKEN and GEMINI_KEY:
+    if BOT_TOKEN and OPENAI_KEY:
 
         # Start Flask in background
         threading.Thread(target=run_flask, daemon=True).start()
@@ -94,4 +99,4 @@ if __name__ == '__main__':
         except Exception as e:
             logger.error(f"Fatal error: {e}")
     else:
-        logger.error("❌ Missing BOT_TOKEN or GEMINI_API_KEY")
+        logger.error("❌ Missing BOT_TOKEN or OPENAI_KEY")
